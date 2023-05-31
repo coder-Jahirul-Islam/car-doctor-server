@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
 
@@ -30,6 +30,86 @@ async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
+
+
+        const servicesCollection = client.db('carDoctor').collection('services');
+        const checkOutCollection = client.db('carDoctor').collection('checkOuts')
+
+
+        app.get('/services', async (req, res) => {
+            const cursor = servicesCollection.find();
+            const result = await cursor.toArray();
+            res.send(result)
+        })
+
+        app.get('/services/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+
+
+            const options = {
+                // Include only the `title` and `imdb` fields in the returned document
+                projection: { title: 1, price: 1, service_id: 1, img: 1 }
+            };
+
+
+            const result = await servicesCollection.findOne(query, options);
+            res.send(result);
+        })
+
+
+
+
+        // checkouts
+        app.get('/checkings', async (req, res) => {
+            console.log(req.body.email);
+            let query = {};
+
+            if (req.query?.email) {
+                query = { email: req.query.email }
+            }
+
+            const result = await checkOutCollection.find(query).toArray();
+
+            res.send(result)
+        })
+
+
+
+        app.post('/checkings', async (req, res) => {
+            const checking = req.body;
+            console.log(checking);
+            const result = await checkOutCollection.insertOne(checking);
+            res.send(result)
+
+        })
+
+        app.patch('/checkings/:id', async(req, res)=>{
+            const id = req.params.id;
+            const filter = {_id: new ObjectId(id)}
+
+            const updatedBooking = req.body;
+            console.log(updatedBooking);
+
+            const updatedDoc = {
+                $set:{
+                    status:updatedBooking.status
+                }
+            }
+            const result = await checkOutCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+
+            
+        })
+
+        app.delete('/checkings/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await checkOutCollection.deleteOne(query)
+            res.send(result);
+
+        })
+
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
